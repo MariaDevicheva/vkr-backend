@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import create_engine, Column, Integer, String, Enum
@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker, Session
 import enum
 import hashlib
 import os
+from typing import Optional
 
 # ================== НАСТРОЙКИ ==================
 DATABASE_URL = "sqlite:///./vkr.db"
@@ -246,13 +247,12 @@ def create_test_users(db: Session):
 # ================== ПРИЛОЖЕНИЕ FASTAPI ==================
 app = FastAPI(title="Запись на ВКР API", version="1.0.0")
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://mariadevicheva.github.io",  # ✅ Ваш фронтенд!
-        "http://localhost:5173",              # для локальной разработки
+        "https://mariadevicheva.github.io",
+        "http://localhost:5173",
+        "http://192.168.1.45:5173"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -315,6 +315,72 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     return LoginResponse(
         success=True,
         message=f"Добро пожаловать, {user.full_name}!",
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role,
+            photo_url=user.photo_url
+        ),
+        profile=profile
+    )
+
+@app.get("/api/auth/me", response_model=LoginResponse)
+async def get_current_user(
+    x_user_id: Optional[int] = Header(None, alias="X-User-ID"),
+    db: Session = Depends(get_db)
+):
+    """
+    Получение данных текущего пользователя.
+    Для теста: передавайте user_id в заголовке X-User-ID.
+    """
+    if x_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="User ID не передан. Используйте заголовок X-User-ID"
+        )
+    
+    user = db.query(User).filter(User.id == x_user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+    
+    profile = None
+    if user.role == UserRole.STUDENT:
+        student = db.query(Student).filter(Student.user_id == user.id).first()
+        if student:
+            profile = StudentProfileResponse(
+                id=student.id,
+                user_id=student.user_id,
+                full_name=student.full_name,
+                email=user.email,
+                group_number=student.group_number,
+                degree_level=student.degree_level.value,
+                course=student.course,
+                institute=student.institute,
+                department=student.department,
+                photo_url=user.photo_url
+            )
+    elif user.role == UserRole.TEACHER:
+        teacher = db.query(Teacher).filter(Teacher.user_id == user.id).first()
+        if teacher:
+            profile = TeacherProfileResponse(
+                id=teacher.id,
+                user_id=teacher.user_id,
+                full_name=teacher.full_name,
+                email=user.email,
+                department=teacher.department,
+                position=teacher.position,
+                academic_degree=teacher.academic_degree.value,
+                research_area=teacher.research_area,
+                max_students=teacher.max_students,
+                current_students=teacher.current_students,
+                photo_url=user.photo_url
+            )
+    
+    return LoginResponse(
+        success=True,
+        message="Пользователь найден",
         user=UserResponse(
             id=user.id,
             email=user.email,
