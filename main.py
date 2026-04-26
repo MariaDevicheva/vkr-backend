@@ -251,9 +251,8 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://mariaDevicheva.github.io/vkr-cabinet",  # ← замените на ваш домен
-        "http://localhost:5173",
-        "http://192.168.1.45:5173"
+        "https://mariadevicheva.github.io",  # ✅ Ваш фронтенд!
+        "http://localhost:5173",              # для локальной разработки
     ],
     allow_credentials=True,
     allow_methods=["*"],
