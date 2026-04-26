@@ -246,9 +246,15 @@ def create_test_users(db: Session):
 # ================== ПРИЛОЖЕНИЕ FASTAPI ==================
 app = FastAPI(title="Запись на ВКР API", version="1.0.0")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://mariaDevicheva.github.io/vkr-cabinet",  # ← замените на ваш домен
+        "http://localhost:5173",
+        "http://192.168.1.45:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
