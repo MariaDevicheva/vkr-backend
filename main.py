@@ -248,7 +248,7 @@ app = FastAPI(title="Запись на ВКР API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -350,3 +350,10 @@ async def create_application(student_id: int, teacher_id: int, db: Session = Dep
     db.commit()
     
     return {"success": True, "message": "Заявка отправлена"}
+
+# ================== ЗАПУСК ==================
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
